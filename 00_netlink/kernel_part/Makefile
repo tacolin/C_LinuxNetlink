@@ -1,4 +1,4 @@
-ifneq ($(KERNELRELEASE),)
+:ifneq ($(KERNELRELEASE),)
 
 obj-m	:= taco.o
 taco-objs := taco_1.o
@@ -16,5 +16,3 @@ endif
 
 clean:
 	@$(RM) -rf *.o *.ko *~ core .depend *.mod.c .*.cmd .tmp_versions .*.o.d *.symvers *.markers *.order
-
-
