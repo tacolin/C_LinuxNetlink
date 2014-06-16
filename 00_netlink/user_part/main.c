@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
     recvmsg( socketFd, &msg, 0 );
     printf("[USER-PART] Receive message from kernel : %s\n", (char*)NLMSG_DATA(pNlhdr) );
 
-
+    free(pNlhdr);
     close(socketFd);
 
     return 0;
