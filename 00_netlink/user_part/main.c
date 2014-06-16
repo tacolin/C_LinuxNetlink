@@ -30,7 +30,9 @@ int main(int argc, char* argv[])
 
 
     struct nlmsghdr *pNlhdr;
-    pNlhdr = (struct nlmsghdr*)malloc( NLMSG_SPACE(MAX_PAYLOAD) );
+    char buf[ NLMSG_SPACE(MAX_PAYLOAD) ];
+//    pNlhdr = (struct nlmsghdr*)malloc( NLMSG_SPACE(MAX_PAYLOAD) );
+    pNlhdr = (struct nlmsghdr*)buf;
     memset( pNlhdr, 0, NLMSG_SPACE(MAX_PAYLOAD) );
     pNlhdr->nlmsg_len   = NLMSG_SPACE(MAX_PAYLOAD);
     pNlhdr->nlmsg_pid   = getpid();
@@ -59,7 +61,7 @@ int main(int argc, char* argv[])
     recvmsg( socketFd, &msg, 0 );
     printf("[USER-PART] Receive message from kernel : %s\n", (char*)NLMSG_DATA(pNlhdr) );
 
-    free(pNlhdr);
+//    free(pNlhdr);
     close(socketFd);
 
     return 0;
