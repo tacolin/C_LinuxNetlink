@@ -5,6 +5,7 @@
 #include <linux/sched.h>
 #include <linux/module.h>
 #include <linux/init.h>
+#include <linux/version.h>
 
 MODULE_AUTHOR("tacolin");
 MODULE_DESCRIPTION("NETLINK KERNEL TEST MODULE");
@@ -60,9 +61,32 @@ static void process_user_msg(struct sk_buff *pSkb)
     send_msg_to_user(g_pSocket, pid, pMsgBuf);
 }
 
+static struct sock* netlink_create_wrapper(struct net *pNet, int unit, unsigned int groups, void (*input)(struct sk_buff* skb), struct mutex *pCb_mutex, struct module *pModule)
+{
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 6, 0)
+    return netlink_kernel_create(&init_net, unit, groups, input, pCb_mutex, pModule);
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(3, 7, 0)
+    struct netlink_kernel_cfg cfg;
+    cfg.groups = groups;
+    cfg.input = input;
+    cfg.cb_mutex = pCb_mutex;
+    cfg.bind = NULL;
+   
+    return netlink_kernel_create(&init_net, unit, pModule, &cfg);
+#else
+    struct netlink_kernel_cfg cfg;
+    cfg.groups = groups;
+    cfg.input = input;
+    cfg.cb_mutex = pCb_mutex;
+    cfg.bind = NULL;
+   
+    return netlink_kernel_create(&init_net, unit, &cfg);
+#endif 
+}
+
 static int __init kernel_module_init(void)
 {
-    g_pSocket = netlink_kernel_create(&init_net, NETLINK_TEST, 0, process_user_msg, NULL, THIS_MODULE);
+    g_pSocket = netlink_create_wrapper(&init_net, NETLINK_TEST, 0, process_user_msg, NULL, THIS_MODULE);
 
     printk("[KERNEL-PART] Module Inserted\n");
 
