@@ -63,7 +63,10 @@ static void process_user_msg(struct sk_buff *pSkb)
 
 static struct sock* netlink_create_wrapper(struct net *pNet, int unit, unsigned int groups, void (*input)(struct sk_buff* skb), struct mutex *pCb_mutex, struct module *pModule)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 6, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0)
+    printk("[KERNEL-PART] do not support linux kernel version less than 3.5\n");
+    return NULL;
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(3, 6, 0)
     return netlink_kernel_create(&init_net, unit, groups, input, pCb_mutex, pModule);
 #elif LINUX_VERSION_CODE < KERNEL_VERSION(3, 7, 0)
     struct netlink_kernel_cfg cfg;
@@ -87,6 +90,11 @@ static struct sock* netlink_create_wrapper(struct net *pNet, int unit, unsigned 
 static int __init kernel_module_init(void)
 {
     g_pSocket = netlink_create_wrapper(&init_net, NETLINK_TEST, 0, process_user_msg, NULL, THIS_MODULE);
+    if ( NULL == g_pSocket )
+    {
+        printk("[KERNEL-PART] Module Insert Failed\n");
+        return -1;
+    }
 
     printk("[KERNEL-PART] Module Inserted\n");
 
