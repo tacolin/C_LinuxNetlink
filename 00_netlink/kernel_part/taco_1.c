@@ -67,7 +67,7 @@ static struct sock* netlink_create_wrapper(struct net *pNet, int unit, unsigned 
     printk("[KERNEL-PART] do not support linux kernel version less than 3.5\n");
     return NULL;
 #elif LINUX_VERSION_CODE < KERNEL_VERSION(3, 6, 0)
-    return netlink_kernel_create(&init_net, unit, groups, input, pCb_mutex, pModule);
+    return netlink_kernel_create(pNet, unit, groups, input, pCb_mutex, pModule);
 #elif LINUX_VERSION_CODE < KERNEL_VERSION(3, 7, 0)
     struct netlink_kernel_cfg cfg;
     cfg.groups = groups;
@@ -75,7 +75,7 @@ static struct sock* netlink_create_wrapper(struct net *pNet, int unit, unsigned 
     cfg.cb_mutex = pCb_mutex;
     cfg.bind = NULL;
    
-    return netlink_kernel_create(&init_net, unit, pModule, &cfg);
+    return netlink_kernel_create(pNet, unit, pModule, &cfg);
 #else
     struct netlink_kernel_cfg cfg;
     cfg.groups = groups;
