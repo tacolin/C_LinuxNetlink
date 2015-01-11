@@ -1,14 +1,6 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <linux/netlink.h>
-#include <linux/socket.h>
+#include "taco_user.h"
 
-#define NETLINK_TEST 17
-#define MAX_PAYLOAD  4096
-
-static char _buffer[NLMSG_SPACE(MAX_PAYLOAD)];
+static unsigned char _buffer[NLMSG_SPACE(MAX_PAYLOAD)];
 
 int main(int argc, char* argv[])
 {
@@ -18,7 +10,7 @@ int main(int argc, char* argv[])
     struct sockaddr_nl srcAddr;
     memset( &srcAddr, 0, sizeof(srcAddr) );
     srcAddr.nl_family = AF_NETLINK;
-    srcAddr.nl_pid    = getpid();  
+    srcAddr.nl_pid    = getpid();
     srcAddr.nl_groups = 0;
     bind( socketFd, (struct sockaddr*)&srcAddr, sizeof(srcAddr) );
 
@@ -33,7 +25,7 @@ int main(int argc, char* argv[])
     memset( pAllocatedNlhdr, 0, NLMSG_SPACE(MAX_PAYLOAD) );
     pAllocatedNlhdr->nlmsg_len   = NLMSG_SPACE(MAX_PAYLOAD);
     pAllocatedNlhdr->nlmsg_pid   = getpid();
-    pAllocatedNlhdr->nlmsg_flags = 0;    
+    pAllocatedNlhdr->nlmsg_flags = 0;
     sprintf( NLMSG_DATA(pAllocatedNlhdr), "Hello from User" );
 
     struct iovec iov;
@@ -46,7 +38,7 @@ int main(int argc, char* argv[])
     msg.msg_name    = (void*)&dstAddr;
     msg.msg_namelen = sizeof(dstAddr);
     msg.msg_iov = &iov;
-    msg.msg_iovlen = 1;    
+    msg.msg_iovlen = 1;
 
     sendmsg( socketFd, &msg, 0 );
 
