@@ -83,7 +83,7 @@ static struct sock* netlink_create_wrapper(struct net *pNet, int unit, unsigned 
     cfg.cb_mutex = pCb_mutex;
     cfg.bind = NULL;
    
-    return netlink_kernel_create(&init_net, unit, &cfg);
+    return netlink_kernel_create(pNet, unit, &cfg);
 #endif 
 }
 
