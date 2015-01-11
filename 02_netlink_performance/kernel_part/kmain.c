@@ -7,30 +7,33 @@ MODULE_LICENSE("GPL");
 static struct sock* _socket = NULL;
 static unsigned char _rxBuffer[MAX_PAYLOAD] = {};
 
-static void _recvUserMessage(struct sk_buff *skb, char* recvBuf, int *pid)
+static int _recvUserMessage(struct sk_buff *skb, char* recvBuf, int *pid)
 {
     struct nlmsghdr *nlhdr = NULL;
 
-    CHECK_IF(NULL==skb, return, "skb is null");
-    CHECK_IF(NULL==recvBuf, return, "recv buffer is null");
-    CHECK_IF(NULL==pid, return, "pid memory is null");
+    CHECK_IF(NULL==skb, goto _ERROR, "skb is null");
+    CHECK_IF(NULL==recvBuf, goto _ERROR, "recv buffer is null");
+    CHECK_IF(NULL==pid, goto _ERROR, "pid memory is null");
 
     nlhdr = (struct nlmsghdr*)(skb->data);
     memcpy(recvBuf, nlmsg_data(nlhdr), nlmsg_len(nlhdr) );
     *pid = nlhdr->nlmsg_pid;
 
-    return;
+    return nlmsg_len(nlhdr);
+
+_ERROR:
+    return -1;
 }
 
-static void _sendMessageToUser(struct sock* socket, int pid, char* sendBuf)
+static int _sendMessageToUser(struct sock* socket, int pid, char* sendBuf)
 {
     int msgSize            = 0;
-    int sendResult         = -1;
+    int ret                = -1;
     struct sk_buff* skb    = NULL;
     struct nlmsghdr* nlhdr = NULL;
 
-    CHECK_IF(NULL==socket, return, "socket is null");
-    CHECK_IF(NULL==sendBuf, return, "send buffer is null");
+    CHECK_IF(NULL==socket, goto _ERROR, "socket is null");
+    CHECK_IF(NULL==sendBuf, goto _ERROR, "send buffer is null");
 
     msgSize = strlen(sendBuf);
     skb     = nlmsg_new(msgSize, 0 );
@@ -39,26 +42,39 @@ static void _sendMessageToUser(struct sock* socket, int pid, char* sendBuf)
     sprintf( nlmsg_data(nlhdr), sendBuf, msgSize );
     NETLINK_CB(skb).dst_group = 0;
 
-    sendResult =  nlmsg_unicast(socket, skb, pid);
-    CHECK_IF(sendResult<0, return, "unicast a message to user failed");
+    ret = nlmsg_unicast(socket, skb, pid);
+    CHECK_IF(ret<0, goto _ERROR, "unicast a message to user failed");
 
-    return;
+    // nlmsg_unicast return 0 : success, return < 0 : failed
+    // it will never return > 0
+
+    return msgSize;
+
+_ERROR:
+    return -1;
 }
 
 static void _processNetlinkMessage(struct sk_buff *skb)
 {
     int pid = -1;
+    int recvLen = 0;
+    int sendLen = 0;
 
     CHECK_IF(NULL==skb, return, "skb is null");
 
     memset(_rxBuffer, 0, MAX_PAYLOAD);
-    _recvUserMessage(skb, _rxBuffer, &pid);
+    recvLen = _recvUserMessage(skb, _rxBuffer, &pid);
+    CHECK_IF(0>=recvLen, return, "_recvUserMessage failed");
 
     dprint("received pid=%d's message : %s", pid, _rxBuffer);
 
     memset(_rxBuffer, 0, MAX_PAYLOAD);
     sprintf(_rxBuffer, "Hello from Kernel");
-    _sendMessageToUser(_socket, pid, _rxBuffer);
+
+    sendLen = _sendMessageToUser(_socket, pid, _rxBuffer);
+    CHECK_IF(0>=sendLen, return, "_sendMessageToUser failed");
+
+    dprint("sendLen = %d", sendLen);
 
     return;
 }
