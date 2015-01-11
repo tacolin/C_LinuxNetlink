@@ -1,1 +1,0 @@
-cmd_/home/taco/C_LinuxNetlink/02_netlink_performance/kernel_part/taco.o := ld -m elf_i386   -r -o /home/taco/C_LinuxNetlink/02_netlink_performance/kernel_part/taco.o /home/taco/C_LinuxNetlink/02_netlink_performance/kernel_part/kmain.o 
