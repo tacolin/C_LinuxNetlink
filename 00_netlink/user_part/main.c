@@ -6,7 +6,7 @@
 #include <linux/socket.h>
 
 #define NETLINK_TEST 17
-#define MAX_PAYLOAD  512
+#define MAX_PAYLOAD  4096
 
 static char _buffer[NLMSG_SPACE(MAX_PAYLOAD)];
 

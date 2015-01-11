@@ -12,7 +12,7 @@ MODULE_DESCRIPTION("NETLINK KERNEL TEST MODULE");
 MODULE_LICENSE("GPL");
 
 #define NETLINK_TEST 17
-#define MAX_PAYLOAD  512
+#define MAX_PAYLOAD  4096
 
 static struct sock* g_pSocket = NULL;
 
