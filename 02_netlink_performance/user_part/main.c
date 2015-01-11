@@ -13,6 +13,28 @@ static int _bindNetlinkSocket(int socketFd)
     return bind( socketFd, (struct sockaddr*)&rxaddr, sizeof(rxaddr) );
 }
 
+static int _recvKernelMessage(int socketFd)
+{
+    struct nlmsghdr *nlhdr;
+    nlhdr = (struct nlmsghdr*)_buffer;
+    memset(nlhdr, 0, sizeof(struct nlmsghdr));
+    nlhdr->nlmsg_len   = NLMSG_SPACE(MAX_PAYLOAD);
+    nlhdr->nlmsg_pid   = getpid();
+    nlhdr->nlmsg_flags = 0;
+
+    struct iovec iov = {
+        .iov_base = (void*)nlhdr,
+        .iov_len = nlhdr->nlmsg_len,
+    };
+
+    struct msghdr msg = {
+        .msg_iov = &iov,
+        .msg_iovlen = 1,
+    };
+
+    return recvmsg( socketFd, &msg, 0 );
+}
+
 int main(int argc, char* argv[])
 {
     int socketFd = socket(AF_NETLINK, SOCK_RAW, NETLINK_TEST);
@@ -48,15 +70,12 @@ int main(int argc, char* argv[])
 
     sendmsg( socketFd, &msg, 0 );
 
-    char localBufNlhdr[ NLMSG_SPACE(MAX_PAYLOAD) ];
-    memset( localBufNlhdr, 0, NLMSG_SPACE(MAX_PAYLOAD) );
-    iov.iov_base = (void*)localBufNlhdr; // 把記憶體位置換掉
+    int recvLen = _recvKernelMessage(socketFd);
+    CHECK_IF(0 >= recvLen, goto _ERROR, "_recvKernelMessage failed");
 
-    recvmsg( socketFd, &msg, 0 );
-    dprint("Receive message from kernel : %s", (char*)NLMSG_DATA(localBufNlhdr) );
+    dprint("Receive message from kernel : %s", (char*)NLMSG_DATA(_buffer) );
 
     close(socketFd);
-
     return 0;
 
 _ERROR:
