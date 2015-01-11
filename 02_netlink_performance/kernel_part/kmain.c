@@ -1,18 +1,8 @@
-#include <linux/types.h>
-#include <linux/kernel.h>
-#include <linux/netlink.h>
-#include <net/sock.h>
-#include <linux/sched.h>
-#include <linux/module.h>
-#include <linux/init.h>
-#include <linux/version.h>
+#include "taco_kernel.h"
 
 MODULE_AUTHOR("tacolin");
 MODULE_DESCRIPTION("NETLINK KERNEL TEST MODULE");
 MODULE_LICENSE("GPL");
-
-#define NETLINK_TEST 17
-#define MAX_PAYLOAD  4096
 
 static struct sock* g_pSocket = NULL;
 
@@ -48,7 +38,7 @@ static void send_msg_to_user(struct sock* pSocket, int pid, char* pSendBuf)
     }
 }
 
-static void process_user_msg(struct sk_buff *pSkb) 
+static void process_user_msg(struct sk_buff *pSkb)
 {
     int pid = -1;
 
@@ -75,7 +65,7 @@ static struct sock* netlink_create_wrapper(struct net *pNet, int unit, unsigned 
     cfg.input = input;
     cfg.cb_mutex = pCb_mutex;
     cfg.bind = NULL;
-   
+
     return netlink_kernel_create(pNet, unit, pModule, &cfg);
 #else
     struct netlink_kernel_cfg cfg;
@@ -83,9 +73,9 @@ static struct sock* netlink_create_wrapper(struct net *pNet, int unit, unsigned 
     cfg.input = input;
     cfg.cb_mutex = pCb_mutex;
     cfg.bind = NULL;
-   
+
     return netlink_kernel_create(pNet, unit, &cfg);
-#endif 
+#endif
 }
 
 static int __init kernel_module_init(void)

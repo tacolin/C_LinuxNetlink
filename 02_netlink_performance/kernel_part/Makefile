@@ -1,7 +1,7 @@
 ifneq ($(KERNELRELEASE),)
 
 obj-m	:= taco.o
-taco-objs := taco_1.o
+taco-objs := kmain.o
 
 else
 
