@@ -8,6 +8,8 @@
 #define NETLINK_TEST 17
 #define MAX_PAYLOAD  512
 
+static char _buffer[NLMSG_SPACE(MAX_PAYLOAD)];
+
 int main(int argc, char* argv[])
 {
     int socketFd;
@@ -27,7 +29,7 @@ int main(int argc, char* argv[])
     dstAddr.nl_groups = 0;
 
     struct nlmsghdr *pAllocatedNlhdr;
-    pAllocatedNlhdr = (struct nlmsghdr*)malloc( NLMSG_SPACE(MAX_PAYLOAD) );
+    pAllocatedNlhdr = (struct nlmsghdr*)_buffer;
     memset( pAllocatedNlhdr, 0, NLMSG_SPACE(MAX_PAYLOAD) );
     pAllocatedNlhdr->nlmsg_len   = NLMSG_SPACE(MAX_PAYLOAD);
     pAllocatedNlhdr->nlmsg_pid   = getpid();
@@ -47,7 +49,6 @@ int main(int argc, char* argv[])
     msg.msg_iovlen = 1;    
 
     sendmsg( socketFd, &msg, 0 );
-    free(pAllocatedNlhdr); // 用完以後馬上就 free
 
     char localBufNlhdr[ NLMSG_SPACE(MAX_PAYLOAD) ];
     memset( localBufNlhdr, 0, NLMSG_SPACE(MAX_PAYLOAD) );
