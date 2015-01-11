@@ -1,63 +1,95 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <linux/netlink.h>
-#include <linux/socket.h>
+#include "taco_user.h"
 
-#define NETLINK_TEST 17
-#define MAX_PAYLOAD  4096
+static unsigned char _buffer[NLMSG_SPACE(MAX_PAYLOAD)] = {};
 
-static char _buffer[NLMSG_SPACE(MAX_PAYLOAD)];
+static int _bindNetlinkSocket(int socketFd)
+{
+    struct sockaddr_nl rxaddr = {
+        .nl_family = AF_NETLINK,
+        .nl_pid = getpid(),
+        .nl_groups = 0,
+    };
+
+    return bind(socketFd, (struct sockaddr*)&rxaddr, sizeof(rxaddr));
+}
+
+static int _recvKernelMessage(int socketFd)
+{
+    struct nlmsghdr *nlhdr;
+    nlhdr = (struct nlmsghdr*)_buffer;
+    memset(nlhdr, 0, sizeof(struct nlmsghdr));
+    nlhdr->nlmsg_len   = NLMSG_SPACE(MAX_PAYLOAD);
+    nlhdr->nlmsg_pid   = getpid();
+    nlhdr->nlmsg_flags = 0;
+
+    struct iovec iov = {
+        .iov_base = (void*)nlhdr,
+        .iov_len = nlhdr->nlmsg_len,
+    };
+
+    struct msghdr msg = {
+        .msg_iov = &iov,
+        .msg_iovlen = 1,
+    };
+
+    return recvmsg(socketFd, &msg, 0);
+}
+
+static int _sendMessageToKernel(int socketFd)
+{
+    struct sockaddr_nl txaddr = {
+        .nl_family = AF_NETLINK,
+        .nl_pid = 0,
+        .nl_groups = 0,
+    };
+
+    struct nlmsghdr *nlhdr;
+    nlhdr = (struct nlmsghdr*)_buffer;
+    memset(nlhdr, 0, sizeof(struct nlmsghdr));
+    nlhdr->nlmsg_len   = NLMSG_SPACE(MAX_PAYLOAD);
+    nlhdr->nlmsg_pid   = getpid();
+    nlhdr->nlmsg_flags = 0;
+
+    sprintf( NLMSG_DATA(nlhdr), "Hello from User" );
+
+    struct iovec iov = {
+        .iov_base = (void*)nlhdr,
+        .iov_len = nlhdr->nlmsg_len,
+    };
+
+    struct msghdr msg = {
+        .msg_name = (void*)&txaddr,
+        .msg_namelen = sizeof(txaddr),
+        .msg_iov = &iov,
+        .msg_iovlen = 1,
+    };
+
+    return sendmsg(socketFd, &msg, 0);
+}
 
 int main(int argc, char* argv[])
 {
-    int socketFd;
-    socketFd = socket(AF_NETLINK, SOCK_RAW, NETLINK_TEST);
+    int socketFd = socket(AF_NETLINK, SOCK_RAW, NETLINK_TEST);
+    CHECK_IF(0 > socketFd, goto _ERROR, "socket failed");
 
-    struct sockaddr_nl srcAddr;
-    memset( &srcAddr, 0, sizeof(srcAddr) );
-    srcAddr.nl_family = AF_NETLINK;
-    srcAddr.nl_pid    = getpid();  
-    srcAddr.nl_groups = 0;
-    bind( socketFd, (struct sockaddr*)&srcAddr, sizeof(srcAddr) );
+    int ret = _bindNetlinkSocket(socketFd);
+    CHECK_IF(0 > ret, goto _ERROR, "bind failed");
 
-    struct sockaddr_nl dstAddr;
-    memset( &dstAddr, 0, sizeof(dstAddr) );
-    dstAddr.nl_family = AF_NETLINK;
-    dstAddr.nl_pid    = 0;
-    dstAddr.nl_groups = 0;
+    int sendLen = _sendMessageToKernel(socketFd);
+    CHECK_IF(0 >= sendLen, goto _ERROR, "_sendMessageToKernel failed");
 
-    struct nlmsghdr *pAllocatedNlhdr;
-    pAllocatedNlhdr = (struct nlmsghdr*)_buffer;
-    memset( pAllocatedNlhdr, 0, NLMSG_SPACE(MAX_PAYLOAD) );
-    pAllocatedNlhdr->nlmsg_len   = NLMSG_SPACE(MAX_PAYLOAD);
-    pAllocatedNlhdr->nlmsg_pid   = getpid();
-    pAllocatedNlhdr->nlmsg_flags = 0;    
-    sprintf( NLMSG_DATA(pAllocatedNlhdr), "Hello from User" );
+    int recvLen = _recvKernelMessage(socketFd);
+    CHECK_IF(0 >= recvLen, goto _ERROR, "_recvKernelMessage failed");
 
-    struct iovec iov;
-    memset( &iov, 0, sizeof(struct iovec) );
-    iov.iov_base = (void*)pAllocatedNlhdr;
-    iov.iov_len  = pAllocatedNlhdr->nlmsg_len;
-
-    struct msghdr msg;
-    memset( &msg, 0, sizeof(struct msghdr) );
-    msg.msg_name    = (void*)&dstAddr;
-    msg.msg_namelen = sizeof(dstAddr);
-    msg.msg_iov = &iov;
-    msg.msg_iovlen = 1;    
-
-    sendmsg( socketFd, &msg, 0 );
-
-    char localBufNlhdr[ NLMSG_SPACE(MAX_PAYLOAD) ];
-    memset( localBufNlhdr, 0, NLMSG_SPACE(MAX_PAYLOAD) );
-    iov.iov_base = (void*)localBufNlhdr; // 把記憶體位置換掉
-
-    recvmsg( socketFd, &msg, 0 );
-    printf("[USER-PART] Receive message from kernel : %s\n", (char*)NLMSG_DATA(localBufNlhdr) );
+    dprint("Receive message from kernel : %s", (char*)NLMSG_DATA(_buffer) );
 
     close(socketFd);
-
     return 0;
+
+_ERROR:
+    if (socketFd > 0)
+    {
+        close(socketFd);
+    }
+    return -1;
 }
