@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
     iov.iov_base = (void*)localBufNlhdr; // 把記憶體位置換掉
 
     recvmsg( socketFd, &msg, 0 );
-    printf("[USER-PART] Receive message from kernel : %s\n", (char*)NLMSG_DATA(localBufNlhdr) );
+    dprint("Receive message from kernel : %s", (char*)NLMSG_DATA(localBufNlhdr) );
 
     close(socketFd);
 
