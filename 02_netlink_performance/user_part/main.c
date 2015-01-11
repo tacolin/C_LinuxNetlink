@@ -10,7 +10,7 @@ static int _bindNetlinkSocket(int socketFd)
         .nl_groups = 0,
     };
 
-    return bind( socketFd, (struct sockaddr*)&rxaddr, sizeof(rxaddr) );
+    return bind(socketFd, (struct sockaddr*)&rxaddr, sizeof(rxaddr));
 }
 
 static int _recvKernelMessage(int socketFd)
@@ -32,17 +32,11 @@ static int _recvKernelMessage(int socketFd)
         .msg_iovlen = 1,
     };
 
-    return recvmsg( socketFd, &msg, 0 );
+    return recvmsg(socketFd, &msg, 0);
 }
 
-int main(int argc, char* argv[])
+static int _sendMessageToKernel(int socketFd)
 {
-    int socketFd = socket(AF_NETLINK, SOCK_RAW, NETLINK_TEST);
-    CHECK_IF(0 > socketFd, goto _ERROR, "socket failed");
-
-    int ret = _bindNetlinkSocket(socketFd);
-    CHECK_IF(0 > ret, goto _ERROR, "bind failed");
-
     struct sockaddr_nl txaddr = {
         .nl_family = AF_NETLINK,
         .nl_pid = 0,
@@ -51,9 +45,11 @@ int main(int argc, char* argv[])
 
     struct nlmsghdr *nlhdr;
     nlhdr = (struct nlmsghdr*)_buffer;
+    memset(nlhdr, 0, sizeof(struct nlmsghdr));
     nlhdr->nlmsg_len   = NLMSG_SPACE(MAX_PAYLOAD);
     nlhdr->nlmsg_pid   = getpid();
     nlhdr->nlmsg_flags = 0;
+
     sprintf( NLMSG_DATA(nlhdr), "Hello from User" );
 
     struct iovec iov = {
@@ -68,7 +64,19 @@ int main(int argc, char* argv[])
         .msg_iovlen = 1,
     };
 
-    sendmsg( socketFd, &msg, 0 );
+    return sendmsg(socketFd, &msg, 0);
+}
+
+int main(int argc, char* argv[])
+{
+    int socketFd = socket(AF_NETLINK, SOCK_RAW, NETLINK_TEST);
+    CHECK_IF(0 > socketFd, goto _ERROR, "socket failed");
+
+    int ret = _bindNetlinkSocket(socketFd);
+    CHECK_IF(0 > ret, goto _ERROR, "bind failed");
+
+    int sendLen = _sendMessageToKernel(socketFd);
+    CHECK_IF(0 >= sendLen, goto _ERROR, "_sendMessageToKernel failed");
 
     int recvLen = _recvKernelMessage(socketFd);
     CHECK_IF(0 >= recvLen, goto _ERROR, "_recvKernelMessage failed");
