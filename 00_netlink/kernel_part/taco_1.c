@@ -20,7 +20,7 @@ static void recv_msg_from_user(struct sk_buff *pSkb, char* pRecvBuf, int *pPid)
 {
     struct nlmsghdr *pNlhdr = (struct nlmsghdr*)(pSkb->data);
 
-    memcpy(pRecvBuf, nlmsg_data(pNlhdr), strlen( (char*)nlmsg_data(pNlhdr) ) );
+    memcpy(pRecvBuf, nlmsg_data(pNlhdr), nlmsg_len(pNlhdr) );
 
     *pPid = pNlhdr->nlmsg_pid;
 }
