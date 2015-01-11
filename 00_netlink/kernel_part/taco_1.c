@@ -16,6 +16,8 @@ MODULE_LICENSE("GPL");
 
 static struct sock* g_pSocket = NULL;
 
+static unsigned char _rxBuffer[MAX_PAYLOAD] = {};
+
 static void recv_msg_from_user(struct sk_buff *pSkb, char* pRecvBuf, int *pPid)
 {
     struct nlmsghdr *pNlhdr = (struct nlmsghdr*)(pSkb->data);
@@ -49,16 +51,15 @@ static void send_msg_to_user(struct sock* pSocket, int pid, char* pSendBuf)
 static void process_user_msg(struct sk_buff *pSkb) 
 {
     int pid = -1;
-    char pMsgBuf[MAX_PAYLOAD];
 
-    memset(pMsgBuf, 0, MAX_PAYLOAD);
-    recv_msg_from_user(pSkb, pMsgBuf, &pid);
+    memset(_rxBuffer, 0, MAX_PAYLOAD);
+    recv_msg_from_user(pSkb, _rxBuffer, &pid);
 
-    printk("[KERNEL-PART] received pid=%d's message : %s\n", pid, pMsgBuf);
+    printk("[KERNEL-PART] received pid=%d's message : %s\n", pid, _rxBuffer);
 
-    memset(pMsgBuf, 0, MAX_PAYLOAD);
-    sprintf(pMsgBuf, "Hello from Kernel");
-    send_msg_to_user(g_pSocket, pid, pMsgBuf);
+    memset(_rxBuffer, 0, MAX_PAYLOAD);
+    sprintf(_rxBuffer, "Hello from Kernel");
+    send_msg_to_user(g_pSocket, pid, _rxBuffer);
 }
 
 static struct sock* netlink_create_wrapper(struct net *pNet, int unit, unsigned int groups, void (*input)(struct sk_buff* skb), struct mutex *pCb_mutex, struct module *pModule)
