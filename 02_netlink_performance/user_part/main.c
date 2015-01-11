@@ -1,18 +1,23 @@
 #include "taco_user.h"
 
-static unsigned char _buffer[NLMSG_SPACE(MAX_PAYLOAD)];
+static unsigned char _buffer[NLMSG_SPACE(MAX_PAYLOAD)] = {};
+
+static int _bindNetlinkSocket(int socketFd)
+{
+    struct sockaddr_nl rxaddr = {
+        .nl_family = AF_NETLINK,
+        .nl_pid = getpid(),
+        .nl_groups = 0,
+    };
+    return bind( socketFd, (struct sockaddr*)&rxaddr, sizeof(rxaddr) );
+}
 
 int main(int argc, char* argv[])
 {
-    int socketFd;
-    socketFd = socket(AF_NETLINK, SOCK_RAW, NETLINK_TEST);
+    int socketFd = socket(AF_NETLINK, SOCK_RAW, NETLINK_TEST);
+    CHECK_IF(0 > socketFd, return -1, "socket failed");
 
-    struct sockaddr_nl srcAddr;
-    memset( &srcAddr, 0, sizeof(srcAddr) );
-    srcAddr.nl_family = AF_NETLINK;
-    srcAddr.nl_pid    = getpid();
-    srcAddr.nl_groups = 0;
-    bind( socketFd, (struct sockaddr*)&srcAddr, sizeof(srcAddr) );
+    _bindNetlinkSocket(socketFd);
 
     struct sockaddr_nl dstAddr;
     memset( &dstAddr, 0, sizeof(dstAddr) );
