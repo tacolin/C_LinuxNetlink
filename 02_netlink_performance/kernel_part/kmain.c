@@ -8,7 +8,7 @@ static struct sock* _socket = NULL;
 
 static unsigned char _rxBuffer[MAX_PAYLOAD] = {};
 
-static void recv_msg_from_user(struct sk_buff *skb, char* recvBuf, int *pid)
+static void _recvUserMessage(struct sk_buff *skb, char* recvBuf, int *pid)
 {
     struct nlmsghdr *nlhdr = (struct nlmsghdr*)(skb->data);
 
@@ -17,7 +17,7 @@ static void recv_msg_from_user(struct sk_buff *skb, char* recvBuf, int *pid)
     *pid = nlhdr->nlmsg_pid;
 }
 
-static void send_msg_to_user(struct sock* socket, int pid, char* sendBuf)
+static void _sendMessageToUser(struct sock* socket, int pid, char* sendBuf)
 {
     int msgSize = 0;
     int sendResult = -1;
@@ -35,21 +35,21 @@ static void send_msg_to_user(struct sock* socket, int pid, char* sendBuf)
     CHECK_IF(sendResult < 0, return, "unicast a message to user failed");
 }
 
-static void process_user_msg(struct sk_buff *skb)
+static void _processNetlinkMessage(struct sk_buff *skb)
 {
     int pid = -1;
 
     memset(_rxBuffer, 0, MAX_PAYLOAD);
-    recv_msg_from_user(skb, _rxBuffer, &pid);
+    _recvUserMessage(skb, _rxBuffer, &pid);
 
     dprint("received pid=%d's message : %s", pid, _rxBuffer);
 
     memset(_rxBuffer, 0, MAX_PAYLOAD);
     sprintf(_rxBuffer, "Hello from Kernel");
-    send_msg_to_user(_socket, pid, _rxBuffer);
+    _sendMessageToUser(_socket, pid, _rxBuffer);
 }
 
-static struct sock* netlink_create_wrapper(struct net *net, int unit, unsigned int groups, void (*input)(struct sk_buff* skb), struct mutex *cb_mutext, struct module *module)
+static struct sock* _createNetlinkSocket(struct net *net, int unit, unsigned int groups, void (*input)(struct sk_buff* skb), struct mutex *cb_mutext, struct module *module)
 {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0)
     derror("do not support linux kernel version less than 3.5");
@@ -77,7 +77,7 @@ static struct sock* netlink_create_wrapper(struct net *net, int unit, unsigned i
 
 static int __init taco_initModule(void)
 {
-    _socket = netlink_create_wrapper(&init_net, NETLINK_TEST, 0, process_user_msg, NULL, THIS_MODULE);
+    _socket = _createNetlinkSocket(&init_net, NETLINK_TEST, 0, _processNetlinkMessage, NULL, THIS_MODULE);
     CHECK_IF(NULL == _socket, return -1, "Module Insert Failed");
 
     dprint("ok");
