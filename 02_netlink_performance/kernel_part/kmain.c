@@ -25,21 +25,20 @@ _ERROR:
     return -1;
 }
 
-static int _sendMessageToUser(struct sock* socket, int pid, char* sendBuf)
+static int _sendMessageToUser(struct sock* socket, int pid, void* data, int dataLen)
 {
-    int msgSize            = 0;
     int ret                = -1;
     struct sk_buff* skb    = NULL;
     struct nlmsghdr* nlhdr = NULL;
 
     CHECK_IF(NULL==socket, goto _ERROR, "socket is null");
-    CHECK_IF(NULL==sendBuf, goto _ERROR, "send buffer is null");
+    CHECK_IF(NULL==data, goto _ERROR, "data is null");
+    CHECK_IF(0>=dataLen, goto _ERROR, "dataLen is null");
 
-    msgSize = strlen(sendBuf);
-    skb     = nlmsg_new(msgSize, 0 );
-    nlhdr   = nlmsg_put(skb, 0, 0, NLMSG_DONE, msgSize, 0);
+    skb     = nlmsg_new(dataLen, 0 );
+    nlhdr   = nlmsg_put(skb, 0, 0, NLMSG_DONE, dataLen, 0);
 
-    sprintf( nlmsg_data(nlhdr), sendBuf, msgSize );
+    memcpy(nlmsg_data(nlhdr), data, dataLen);
     NETLINK_CB(skb).dst_group = 0;
 
     ret = nlmsg_unicast(socket, skb, pid);
@@ -48,7 +47,7 @@ static int _sendMessageToUser(struct sock* socket, int pid, char* sendBuf)
     // nlmsg_unicast return 0 : success, return < 0 : failed
     // it will never return > 0
 
-    return msgSize;
+    return dataLen;
 
 _ERROR:
     return -1;
@@ -71,7 +70,7 @@ static void _processNetlinkMessage(struct sk_buff *skb)
     memset(_rxBuffer, 0, MAX_PAYLOAD);
     sprintf(_rxBuffer, "Hello from Kernel");
 
-    sendLen = _sendMessageToUser(_socket, pid, _rxBuffer);
+    sendLen = _sendMessageToUser(_socket, pid, _rxBuffer, MAX_PAYLOAD);
     CHECK_IF(0>=sendLen, return, "_sendMessageToUser failed");
 
     dprint("sendLen = %d", sendLen);

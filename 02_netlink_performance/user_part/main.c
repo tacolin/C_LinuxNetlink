@@ -82,6 +82,7 @@ int main(int argc, char* argv[])
     CHECK_IF(0 >= recvLen, goto _ERROR, "_recvKernelMessage failed");
 
     dprint("Receive message from kernel : %s", (char*)NLMSG_DATA(_buffer) );
+    dprint("recvLen = %d", recvLen);
 
     close(socketFd);
     return 0;
