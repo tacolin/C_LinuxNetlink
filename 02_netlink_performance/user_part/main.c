@@ -21,11 +21,11 @@ int main(int argc, char* argv[])
     int ret = _bindNetlinkSocket(socketFd);
     CHECK_IF(0 > ret, goto _ERROR, "bind failed");
 
-    struct sockaddr_nl txaddr;
-    memset( &txaddr, 0, sizeof(txaddr) );
-    txaddr.nl_family = AF_NETLINK;
-    txaddr.nl_pid    = 0;
-    txaddr.nl_groups = 0;
+    struct sockaddr_nl txaddr = {
+        .nl_family = AF_NETLINK,
+        .nl_pid = 0,
+        .nl_groups = 0,
+    };
 
     struct nlmsghdr *nlhdr;
     nlhdr = (struct nlmsghdr*)_buffer;
@@ -34,17 +34,17 @@ int main(int argc, char* argv[])
     nlhdr->nlmsg_flags = 0;
     sprintf( NLMSG_DATA(nlhdr), "Hello from User" );
 
-    struct iovec iov;
-    memset( &iov, 0, sizeof(struct iovec) );
-    iov.iov_base = (void*)nlhdr;
-    iov.iov_len  = nlhdr->nlmsg_len;
+    struct iovec iov = {
+        .iov_base = (void*)nlhdr,
+        .iov_len = nlhdr->nlmsg_len,
+    };
 
-    struct msghdr msg;
-    memset( &msg, 0, sizeof(struct msghdr) );
-    msg.msg_name    = (void*)&txaddr;
-    msg.msg_namelen = sizeof(txaddr);
-    msg.msg_iov = &iov;
-    msg.msg_iovlen = 1;
+    struct msghdr msg = {
+        .msg_name = (void*)&txaddr,
+        .msg_namelen = sizeof(txaddr),
+        .msg_iov = &iov,
+        .msg_iovlen = 1,
+    };
 
     sendmsg( socketFd, &msg, 0 );
 
