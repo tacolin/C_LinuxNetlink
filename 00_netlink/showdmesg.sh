@@ -1,3 +1,3 @@
 #!/bin/bash
 
-watch 'dmesg | tail -20'
+tail -f /var/log/kern.log
