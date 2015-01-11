@@ -2,6 +2,14 @@
 *.o
 *.ko
 
+# Others
+*.swp
+*.order
+*.symvers
+*.cmd
+*.mod
+*.mod.c
+
 # Libraries
 *.lib
 *.a
