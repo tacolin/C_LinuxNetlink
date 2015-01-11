@@ -32,10 +32,7 @@ static void send_msg_to_user(struct sock* pSocket, int pid, char* pSendBuf)
     NETLINK_CB(pSkb).dst_group = 0;
 
     sendResult =  nlmsg_unicast(pSocket, pSkb, pid);
-    if ( sendResult < 0 )
-    {
-        printk("[KERNEL-PART] unicast a message to user failed\n");
-    }
+    CHECK_IF(sendResult < 0, return, "unicast a message to user failed");
 }
 
 static void process_user_msg(struct sk_buff *pSkb)
@@ -45,7 +42,7 @@ static void process_user_msg(struct sk_buff *pSkb)
     memset(_rxBuffer, 0, MAX_PAYLOAD);
     recv_msg_from_user(pSkb, _rxBuffer, &pid);
 
-    printk("[KERNEL-PART] received pid=%d's message : %s\n", pid, _rxBuffer);
+    dprint("received pid=%d's message : %s", pid, _rxBuffer);
 
     memset(_rxBuffer, 0, MAX_PAYLOAD);
     sprintf(_rxBuffer, "Hello from Kernel");
@@ -55,7 +52,7 @@ static void process_user_msg(struct sk_buff *pSkb)
 static struct sock* netlink_create_wrapper(struct net *pNet, int unit, unsigned int groups, void (*input)(struct sk_buff* skb), struct mutex *pCb_mutex, struct module *pModule)
 {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0)
-    printk("[KERNEL-PART] do not support linux kernel version less than 3.5\n");
+    derror("do not support linux kernel version less than 3.5");
     return NULL;
 #elif LINUX_VERSION_CODE < KERNEL_VERSION(3, 6, 0)
     return netlink_kernel_create(pNet, unit, groups, input, pCb_mutex, pModule);
@@ -81,14 +78,9 @@ static struct sock* netlink_create_wrapper(struct net *pNet, int unit, unsigned 
 static int __init kernel_module_init(void)
 {
     g_pSocket = netlink_create_wrapper(&init_net, NETLINK_TEST, 0, process_user_msg, NULL, THIS_MODULE);
-    if ( NULL == g_pSocket )
-    {
-        printk("[KERNEL-PART] Module Insert Failed\n");
-        return -1;
-    }
+    CHECK_IF(NULL == g_pSocket, return -1, "Module Insert Failed");
 
-    printk("[KERNEL-PART] Module Inserted\n");
-
+    dprint("ok");
     return 0;
 }
 
@@ -96,8 +88,7 @@ static void __exit kernel_module_exit(void)
 {
     netlink_kernel_release(g_pSocket);
 
-    printk("[KERNEL-PART] Module removed\n");
-
+    dprint("ok");
     return;
 }
 
