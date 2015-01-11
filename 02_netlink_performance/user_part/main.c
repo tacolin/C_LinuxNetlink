@@ -9,39 +9,40 @@ static int _bindNetlinkSocket(int socketFd)
         .nl_pid = getpid(),
         .nl_groups = 0,
     };
+
     return bind( socketFd, (struct sockaddr*)&rxaddr, sizeof(rxaddr) );
 }
 
 int main(int argc, char* argv[])
 {
     int socketFd = socket(AF_NETLINK, SOCK_RAW, NETLINK_TEST);
-    CHECK_IF(0 > socketFd, return -1, "socket failed");
+    CHECK_IF(0 > socketFd, goto _ERROR, "socket failed");
 
-    _bindNetlinkSocket(socketFd);
+    int ret = _bindNetlinkSocket(socketFd);
+    CHECK_IF(0 > ret, goto _ERROR, "bind failed");
 
-    struct sockaddr_nl dstAddr;
-    memset( &dstAddr, 0, sizeof(dstAddr) );
-    dstAddr.nl_family = AF_NETLINK;
-    dstAddr.nl_pid    = 0;
-    dstAddr.nl_groups = 0;
+    struct sockaddr_nl txaddr;
+    memset( &txaddr, 0, sizeof(txaddr) );
+    txaddr.nl_family = AF_NETLINK;
+    txaddr.nl_pid    = 0;
+    txaddr.nl_groups = 0;
 
-    struct nlmsghdr *pAllocatedNlhdr;
-    pAllocatedNlhdr = (struct nlmsghdr*)_buffer;
-    memset( pAllocatedNlhdr, 0, NLMSG_SPACE(MAX_PAYLOAD) );
-    pAllocatedNlhdr->nlmsg_len   = NLMSG_SPACE(MAX_PAYLOAD);
-    pAllocatedNlhdr->nlmsg_pid   = getpid();
-    pAllocatedNlhdr->nlmsg_flags = 0;
-    sprintf( NLMSG_DATA(pAllocatedNlhdr), "Hello from User" );
+    struct nlmsghdr *nlhdr;
+    nlhdr = (struct nlmsghdr*)_buffer;
+    nlhdr->nlmsg_len   = NLMSG_SPACE(MAX_PAYLOAD);
+    nlhdr->nlmsg_pid   = getpid();
+    nlhdr->nlmsg_flags = 0;
+    sprintf( NLMSG_DATA(nlhdr), "Hello from User" );
 
     struct iovec iov;
     memset( &iov, 0, sizeof(struct iovec) );
-    iov.iov_base = (void*)pAllocatedNlhdr;
-    iov.iov_len  = pAllocatedNlhdr->nlmsg_len;
+    iov.iov_base = (void*)nlhdr;
+    iov.iov_len  = nlhdr->nlmsg_len;
 
     struct msghdr msg;
     memset( &msg, 0, sizeof(struct msghdr) );
-    msg.msg_name    = (void*)&dstAddr;
-    msg.msg_namelen = sizeof(dstAddr);
+    msg.msg_name    = (void*)&txaddr;
+    msg.msg_namelen = sizeof(txaddr);
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
 
@@ -57,4 +58,11 @@ int main(int argc, char* argv[])
     close(socketFd);
 
     return 0;
+
+_ERROR:
+    if (socketFd > 0)
+    {
+        close(socketFd);
+    }
+    return -1;
 }
