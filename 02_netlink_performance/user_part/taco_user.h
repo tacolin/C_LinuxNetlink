@@ -7,6 +7,8 @@
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <linux/socket.h>
+#include <sys/select.h>
+#include <signal.h>
 
 #define NETLINK_TEST 17
 #define MAX_PAYLOAD  4096

@@ -29,13 +29,14 @@ function DoTest()
     sudo insmod taco.ko
 
     cd ../user_part/
-    ./main
-    ./main
-    ./main
+    ./main &
+
+    pid=`ps -fu $USER | grep "main" | grep -v "grep" | awk '{print $2}'`
+    kill -INT "${pid}"
 
     sudo rmmod taco
 
-    dmesg
+    tail /var/log/kern.log
 }
 
 getopts "ukhcta" option
